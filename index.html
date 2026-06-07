@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ShopMetrics — E-Commerce Analytics Dashboard</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.30.0/dist/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#f8f9fc;--surface:#ffffff;--surface2:#f1f3f8;
+    --text:#1a1a2e;--text2:#64748b;--text3:#94a3b8;
+    --border:#e2e8f0;--radius:10px;--radius-lg:14px;
+  }
+  body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+  .wrapper{max-width:1280px;margin:0 auto;padding:24px 20px}
+
+  /* Topbar */
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:16px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .brand-icon{width:42px;height:42px;background:#1a1a2e;border-radius:10px;display:flex;align-items:center;justify-content:center}
+  .brand-icon i{color:#fff;font-size:20px}
+  .brand-title{font-size:20px;font-weight:600;color:var(--text)}
+  .brand-sub{font-size:12px;color:var(--text2);margin-top:1px}
+  .filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .filters select{font-family:inherit;font-size:13px;padding:7px 12px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);cursor:pointer;outline:none}
+  .filters select:focus{border-color:#3266ad}
+  .live-badge{font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;background:#dcfce7;color:#16a34a;display:flex;align-items:center;gap:5px}
+  .live-dot{width:6px;height:6px;border-radius:50%;background:#16a34a;animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+  /* KPI Cards */
+  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:20px}
+  .kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 18px}
+  .kpi-label{font-size:12px;color:var(--text2);margin-bottom:8px;display:flex;align-items:center;gap:6px;font-weight:500}
+  .kpi-val{font-size:24px;font-weight:600;color:var(--text);line-height:1}
+  .kpi-delta{font-size:11px;margin-top:6px;display:flex;align-items:center;gap:3px}
+  .up{color:#16a34a}.dn{color:#dc2626}
+
+  /* Chart Cards */
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px 20px}
+  .card-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
+  .card-title span{font-size:12px;font-weight:400;color:var(--text2)}
+  .charts-row{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;margin-bottom:16px}
+  .charts-row2{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
+  @media(max-width:900px){.charts-row,.charts-row2{grid-template-columns:1fr}}
+
+  /* Legend */
+  .legend{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:10px}
+  .leg-item{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text2)}
+  .leg-sq{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+
+  /* Products */
+  .prod-list{display:flex;flex-direction:column;gap:10px}
+  .prod-row{display:flex;align-items:center;gap:10px}
+  .prod-rank{font-size:11px;font-weight:600;color:var(--text2);width:18px;text-align:right}
+  .prod-name{font-size:12px;color:var(--text);width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .prod-bar-wrap{flex:1;background:var(--surface2);border-radius:4px;height:6px;overflow:hidden}
+  .prod-bar{height:100%;border-radius:4px}
+  .prod-val{font-size:12px;font-weight:600;color:var(--text);text-align:right;min-width:52px}
+
+  /* Regions */
+  .region-list{display:flex;flex-direction:column;gap:12px}
+  .reg-row{display:flex;flex-direction:column;gap:5px}
+  .reg-top{display:flex;justify-content:space-between;font-size:12px}
+  .reg-name{color:var(--text);font-weight:500}
+  .reg-pct{color:var(--text2)}
+  .reg-bar-wrap{background:var(--surface2);border-radius:4px;height:5px;overflow:hidden}
+  .reg-bar{height:100%;border-radius:4px}
+
+  /* Table */
+  .tbl-wrap{overflow-x:auto}
+  .tbl{width:100%;border-collapse:collapse;font-size:13px;min-width:600px}
+  .tbl th{text-align:left;padding:8px 12px;font-size:11px;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.5px}
+  .tbl td{padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text)}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl tr:hover td{background:#f8fafc}
+  .status{font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px}
+  .s-del{background:#dcfce7;color:#16a34a}
+  .s-prc{background:#fef9c3;color:#ca8a04}
+  .s-cxl{background:#fee2e2;color:#dc2626}
+  .s-pen{background:#f1f5f9;color:#64748b}
+
+  /* Footer */
+  .footer{text-align:center;font-size:12px;color:var(--text2);margin-top:28px;padding-top:20px;border-top:1px solid var(--border)}
+  .footer a{color:#3266ad;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-icon"><i class="ti ti-shopping-bag"></i></div>
+      <div>
+        <div class="brand-title">ShopMetrics</div>
+        <div class="brand-sub">E-Commerce Analytics Dashboard</div>
+      </div>
+    </div>
+    <div class="filters">
+      <select id="rangeFilter" onchange="applyFilters()">
+        <option value="30">Last 30 days</option>
+        <option value="90" selected>Last 90 days</option>
+        <option value="180">Last 6 months</option>
+        <option value="365">Last 12 months</option>
+      </select>
+      <select id="catFilter" onchange="applyFilters()">
+        <option value="all">All Categories</option>
+        <option value="electronics">Electronics</option>
+        <option value="fashion">Fashion</option>
+        <option value="home">Home &amp; Kitchen</option>
+        <option value="beauty">Beauty</option>
+      </select>
+      <div class="live-badge"><span class="live-dot"></span> Live</div>
+    </div>
+  </div>
+
+  <div class="kpi-grid" id="kpiGrid"></div>
+
+  <div class="charts-row">
+    <div class="card">
+      <div class="card-title">Revenue trend <span id="revSpan">monthly</span></div>
+      <div class="legend" id="revLegend"></div>
+      <div style="position:relative;width:100%;height:240px"><canvas id="revChart" role="img" aria-label="Revenue trend over time.">Revenue chart.</canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Sales by category</div>
+      <div class="legend" id="catLegend"></div>
+      <div style="position:relative;width:100%;height:240px"><canvas id="catChart" role="img" aria-label="Sales by category.">Category chart.</canvas></div>
+    </div>
+  </div>
+
+  <div class="charts-row2">
+    <div class="card">
+      <div class="card-title">Top products <span>by revenue</span></div>
+      <div class="prod-list" id="prodList"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Sales by region <span>% share</span></div>
+      <div class="region-list" id="regionList"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Orders by channel</div>
+      <div class="legend" id="chanLegend"></div>
+      <div style="position:relative;width:100%;height:200px"><canvas id="chanChart" role="img" aria-label="Orders by channel.">Channel chart.</canvas></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Recent orders <span>last 10 transactions</span></div>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th>Order ID</th><th>Customer</th><th>Product</th><th>Category</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
+        <tbody id="ordersBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="footer">
+    ShopMetrics v1.0 &nbsp;·&nbsp; Data Analyst Internship Project &nbsp;·&nbsp; All figures in INR (₹) &nbsp;·&nbsp;
+    Built with HTML, CSS, JavaScript &amp; Chart.js
+  </div>
+</div>
+
+<script>
+const COLORS=['#3266ad','#1D9E75','#BA7517','#D85A30','#7F77DD','#D4537E','#888780','#639922','#E24B4A'];
+const BASE={
+  kpis:[
+    {label:'Total Revenue',icon:'ti-currency-rupee',val:4823600,delta:12.4,fmt:'currency'},
+    {label:'Total Orders',icon:'ti-package',val:18742,delta:8.7,fmt:'number'},
+    {label:'Active Customers',icon:'ti-users',val:6891,delta:5.2,fmt:'number'},
+    {label:'Avg Order Value',icon:'ti-chart-line',val:257,delta:3.5,fmt:'currency'},
+    {label:'Conversion Rate',icon:'ti-percentage',val:3.8,delta:-0.4,fmt:'pct'},
+    {label:'Return Rate',icon:'ti-arrow-back-up',val:2.1,delta:-0.8,fmt:'pct'},
+  ],
+  revLabels:['Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun'],
+  revCurr:[310,390,420,480,510,470,400,435,460,510,545,590],
+  revPrev:[260,310,350,390,430,400,330,360,395,440,475,510],
+  categories:{Electronics:38,Fashion:24,'Home & Kitchen':18,Beauty:12,Sports:8},
+  products:[
+    {name:'iPhone 15 Pro',cat:'electronics',rev:842000},
+    {name:'Nike Air Max',cat:'fashion',rev:631000},
+    {name:'Samsung 55" TV',cat:'electronics',rev:589000},
+    {name:'Instant Pot',cat:'home',rev:412000},
+    {name:'Lakme Kit',cat:'beauty',rev:298000},
+    {name:'MacBook Air',cat:'electronics',rev:276000},
+  ],
+  regions:[
+    {name:'Maharashtra',pct:28,col:'#3266ad'},{name:'Karnataka',pct:19,col:'#1D9E75'},
+    {name:'Delhi NCR',pct:17,col:'#BA7517'},{name:'Tamil Nadu',pct:13,col:'#D85A30'},
+    {name:'Gujarat',pct:11,col:'#7F77DD'},{name:'Others',pct:12,col:'#888780'},
+  ],
+  channels:['Direct','Amazon','Flipkart','Instagram','Google Ads'],
+  channelData:[4210,5830,4920,2100,1682],
+  orders:[
+    {id:'#ORD-8821',cust:'Priya Sharma',prod:'iPhone 15 Pro',cat:'Electronics',amt:142999,status:'Delivered',date:'12 Jun'},
+    {id:'#ORD-8820',cust:'Arjun Mehta',prod:'Nike Air Max',cat:'Fashion',amt:12499,status:'Processing',date:'12 Jun'},
+    {id:'#ORD-8819',cust:'Sneha Patil',prod:'Instant Pot',cat:'Home',amt:8999,status:'Delivered',date:'11 Jun'},
+    {id:'#ORD-8818',cust:'Rahul Verma',prod:'Lakme Kit',cat:'Beauty',amt:3299,status:'Pending',date:'11 Jun'},
+    {id:'#ORD-8817',cust:'Anita Joshi',prod:'Samsung 55" TV',cat:'Electronics',amt:64999,status:'Delivered',date:'11 Jun'},
+    {id:'#ORD-8816',cust:'Vikram Singh',prod:'MacBook Air',cat:'Electronics',amt:114999,status:'Processing',date:'10 Jun'},
+    {id:'#ORD-8815',cust:'Deepa Nair',prod:'Nike Air Max',cat:'Fashion',amt:12499,status:'Delivered',date:'10 Jun'},
+    {id:'#ORD-8814',cust:'Karan Malhotra',prod:'Instant Pot',cat:'Home',amt:8999,status:'Cancelled',date:'09 Jun'},
+    {id:'#ORD-8813',cust:'Pooja Agarwal',prod:'Lakme Kit',cat:'Beauty',amt:3299,status:'Delivered',date:'09 Jun'},
+    {id:'#ORD-8812',cust:'Suresh Reddy',prod:'Samsung 55" TV',cat:'Electronics',amt:64999,status:'Delivered',date:'08 Jun'},
+  ]
+};
+const MULT={30:.32,90:1,180:1.95,365:3.8};
+let revChart,catChart,chanChart;
+
+function fmt(v,t){
+  if(t==='currency')return'₹'+Intl.NumberFormat('en-IN',{maximumFractionDigits:0}).format(Math.round(v));
+  if(t==='pct')return v.toFixed(1)+'%';
+  return Intl.NumberFormat('en-IN').format(Math.round(v));
+}
+function makeLegend(id,labels,cols){
+  document.getElementById(id).innerHTML=labels.map((l,i)=>
+    `<span class="leg-item"><span class="leg-sq" style="background:${cols[i%cols.length]}"></span>${l}</span>`).join('');
+}
+function renderKPIs(m){
+  document.getElementById('kpiGrid').innerHTML=BASE.kpis.map(k=>{
+    let v=k.val*m; if(k.fmt==='pct')v=k.val;
+    const up=k.delta>=0;
+    return`<div class="kpi">
+      <div class="kpi-label"><i class="ti ${k.icon}" style="font-size:15px"></i>${k.label}</div>
+      <div class="kpi-val">${fmt(v,k.fmt)}</div>
+      <div class="kpi-delta ${up?'up':'dn'}"><i class="ti ${up?'ti-trending-up':'ti-trending-down'}"></i> ${Math.abs(k.delta)}% vs prev</div>
+    </div>`;
+  }).join('');
+}
+function renderProducts(catF){
+  let prods=[...BASE.products];
+  if(catF&&catF!=='all')prods=prods.filter(p=>p.cat===catF);
+  if(!prods.length)prods=BASE.products.slice(0,4);
+  const max=prods[0].rev;
+  document.getElementById('prodList').innerHTML=prods.map((p,i)=>`
+    <div class="prod-row">
+      <div class="prod-rank">${i+1}</div>
+      <div class="prod-name" title="${p.name}">${p.name}</div>
+      <div class="prod-bar-wrap"><div class="prod-bar" style="width:${Math.round(p.rev/max*100)}%;background:${COLORS[i%COLORS.length]}"></div></div>
+      <div class="prod-val">₹${(p.rev/100000).toFixed(1)}L</div>
+    </div>`).join('');
+}
+function renderRegions(){
+  document.getElementById('regionList').innerHTML=BASE.regions.map(r=>`
+    <div class="reg-row">
+      <div class="reg-top"><span class="reg-name">${r.name}</span><span class="reg-pct">${r.pct}%</span></div>
+      <div class="reg-bar-wrap"><div class="reg-bar" style="width:${r.pct*2.5}%;background:${r.col}"></div></div>
+    </div>`).join('');
+}
+function renderOrders(catF){
+  let rows=BASE.orders;
+  if(catF&&catF!=='all')rows=rows.filter(o=>o.cat.toLowerCase()===catF);
+  if(!rows.length)rows=BASE.orders.slice(0,5);
+  const sc={Delivered:'s-del',Processing:'s-prc',Cancelled:'s-cxl',Pending:'s-pen'};
+  document.getElementById('ordersBody').innerHTML=rows.map(o=>`<tr>
+    <td style="font-family:monospace;font-size:12px">${o.id}</td>
+    <td>${o.cust}</td><td>${o.prod}</td><td>${o.cat}</td>
+    <td><strong>₹${Intl.NumberFormat('en-IN').format(o.amt)}</strong></td>
+    <td><span class="status ${sc[o.status]}">${o.status}</span></td>
+    <td>${o.date}</td></tr>`).join('');
+}
+function applyFilters(){
+  const days=parseInt(document.getElementById('rangeFilter').value);
+  const catF=document.getElementById('catFilter').value;
+  const m=MULT[days]||1;
+  renderKPIs(m);renderProducts(catF);renderOrders(catF);
+  const labels=days<=30?['W1','W2','W3','W4']:days<=90?['Jan','Feb','Mar']:days<=180?['Jan','Feb','Mar','Apr','May','Jun']:BASE.revLabels;
+  document.getElementById('revSpan').textContent=days<=30?'weekly':'monthly';
+  revChart.data.labels=labels;
+  revChart.data.datasets[0].data=BASE.revCurr.slice(-labels.length).map(v=>Math.round(v*m*0.25));
+  revChart.data.datasets[1].data=BASE.revPrev.slice(-labels.length).map(v=>Math.round(v*m*0.25));
+  revChart.update();
+  catChart.data.datasets[0].data=Object.values(BASE.categories).map(v=>v*m);catChart.update();
+  chanChart.data.datasets[0].data=BASE.channelData.map(v=>Math.round(v*m));chanChart.update();
+}
+window.addEventListener('load',()=>{
+  makeLegend('revLegend',['Current period','Previous period'],['#3266ad','#b5d4f4']);
+  revChart=new Chart(document.getElementById('revChart'),{type:'line',data:{labels:BASE.revLabels,datasets:[
+    {label:'Current',data:BASE.revCurr,borderColor:'#3266ad',backgroundColor:'rgba(50,102,173,0.07)',pointBackgroundColor:'#3266ad',pointRadius:3,tension:.4,fill:true,borderWidth:2},
+    {label:'Previous',data:BASE.revPrev,borderColor:'#b5d4f4',pointBackgroundColor:'#b5d4f4',pointRadius:2,tension:.4,borderDash:[4,3],borderWidth:1.5,fill:false}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'₹'+Math.round(c.parsed.y)+'K'}}},scales:{x:{grid:{display:false},ticks:{font:{size:11}}},y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:11},callback:v=>'₹'+v+'K'}}}}});
+
+  const catK=Object.keys(BASE.categories),catV=Object.values(BASE.categories),catC=COLORS.slice(0,5);
+  makeLegend('catLegend',catK.map((k,i)=>`${k} ${catV[i]}%`),catC);
+  catChart=new Chart(document.getElementById('catChart'),{type:'doughnut',data:{labels:catK,datasets:[{data:catV,backgroundColor:catC,borderWidth:2,borderColor:'#fff',hoverOffset:8}]},options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.label}: ${c.parsed}%`}}}}});
+
+  makeLegend('chanLegend',BASE.channels,COLORS);
+  chanChart=new Chart(document.getElementById('chanChart'),{type:'bar',data:{labels:BASE.channels,datasets:[{data:BASE.channelData,backgroundColor:COLORS,borderRadius:5,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y.toLocaleString()+' orders'}}},scales:{x:{grid:{display:false},ticks:{font:{size:11}}},y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:11}}}}}});
+
+  renderProducts('all');renderRegions();renderOrders('all');
+});
+</script>
+</body>
+</html>
